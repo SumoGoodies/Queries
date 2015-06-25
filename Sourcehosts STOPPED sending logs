@@ -1,0 +1,31 @@
+Sourcehosts STOPPED sending logs (last 30 days)
+ 
+_index=sumologic_volume | where _sourceCategory="sourcehost_volume"
+| timeslice 1h
+| join
+  (  parse regex "(?<sourcehost>\"[^\"]+\")\:\{\"sizeInBytes\"\:(?<bytes>\d+),\"count\"\:(?<count>\d+)\}" multi
+     | parse regex field=sourcehost "\"(?<sourcehost>\S+)\""
+     | first(_timeslice) as mostrecentlog by sourceHost ) as t1,
+  (  parse regex "(?<sourcehost>\"[^\"]+\")\:\{\"sizeInBytes\"\:(?<bytes>\d+),\"count\"\:(?<count>\d+)\}" multi
+     | parse regex field=sourcehost "\"(?<sourcehost>\S+)\""
+     | last(_timeslice) as leastrecentlog by sourceHost ) as t2,
+  (  parse regex "(?<sourcehost>\"[^\"]+\")\:\{\"sizeInBytes\"\:(?<bytes>\d+),\"count\"\:(?<count>\d+)\}" multi
+     | parse regex field=sourcehost "\"(?<sourcehost>\S+)\""
+     | count as buckets by sourcehost ) as t3
+on t1.sourcehost = t2.sourcehost and t1.sourcehost = t3.sourcehost
+| t3_buckets as frequency | t1_sourcehost as sourcehost
+| where t1_mostrecentlog - t2_leastrecentlog > (3600000 * 48)  // 48 = 48 hours
+// ***** Known bad sourcehost names **** //
+| where ! (sourcehost in ("localhost","0.0.0.0"))
+| (t3_buckets * 100)/ ((t1_mostrecentlog - t2_leastrecentlog) / (1000*60*5)) as regularity
+| if(regularity > 100,100,regularity) as regularity | if(regularity < 1,1,regularity) as regularity
+| round(regularity) as regularity
+| round((now()-t1_mostrecentlog)/1000/60/60) as hours_ago
+| round(hours_ago/24) as days_ago
+| .05 * regularity * hours_ago as certainty
+| if(certainty > 99,99,certainty) as certainty | if(certainty < 1,1,certainty) as certainty
+| round(certainty) | concat(certainty,"%") as confidence
+| where hours_ago > 3
+| sort certainty desc
+| concat(regularity,"%") as regularity
+| fields sourcehost,hours_ago,days_ago,regularity,confidence
