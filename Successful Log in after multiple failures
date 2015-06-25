@@ -1,0 +1,18 @@
+This is for looking at Windows Event log.  The concept can be applicable to Application logins.
+
+
+_collector=stock_trader_monty _source=windows_events (4624 or 4625) 
+| parse "EventCode = *;" as event_id nodrop | parse "Computer = \"*\";" as comp_name nodrop 
+| extract "Logfile = \"Security\";[\s\S]+?Subject:[\s\S]+?Account Name:[\s&&[^\r]]+(?<src_user>[^\r]+?)\r[\s\S]+?Account Name:[\s&&[^\r]]+(?<dest_user>[^\r\"]+?)(?:\r|\";)"
+| extract "Logfile = \"Security\";[\s\S]+?Source Network Address:[\s&&[^\r]]+(?<src_ip>[^\r]+?)\r" nodrop 
+| comp_name as dest_host | toLowerCase(dest_user) as dest_user
+| join ( where event_id="4624") as t1, (where event_id="4625") as t2 on t1.dest_user=t2.dest_user timewindow 30m 
+| (t1__messagetime-t2__messagetime) as timeGap | where (timeGap < 300000) and (timeGap>0)
+| formatDate(fromMillis(t1__messagetime),"MM/dd/yyyy HH:mm:ss.SSS Z") as LoginTime 
+| t1_dest_user as dest_user | t1_dest_host as dest_host
+| count as Attempts,max(t2__messagetime) as LastFailedEpoc by dest_user,dest_host,LoginTime,t1__messagetime 
+| where Attempts> 3 
+| sort by t1__messagetime | formatDate(fromMillis(long(LastFailedEpoc)),"MM/dd/yyyy HH:mm:ss.SSS Z") as LastFailedTime | fields -lastfailedepoc,t1__messagetime
+| "SA-UserActivity|BruteForce/Login/Success" as classification 
+| "Potential successful brute force login" as message | "High" as Severity 
+| toMillis(now()) as _timeslice | "SumoLogic" as device_vendor | "RuleEngine" as device_type
