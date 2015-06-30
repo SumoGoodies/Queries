@@ -1,4 +1,4 @@
-Sourcehosts STOPPED sending logs (last 30 days)
+Sourcehosts STOPPED sending logs (last 30 days)  shared by DavidM of Austin, TX
  
 _index=sumologic_volume | where _sourceCategory="sourcehost_volume"
 | timeslice 1h
