@@ -1,0 +1,12 @@
+_sourceCategory=*TrendMicroDSM "deep security" | parse regex "Deep Security \w+\|[\d.]+\|(?<signature_id>[\d]+)\|(?<event_name>[^\|]+)\|(?<severity>[^\|]+)\|" | timeslice 5m | count by _timeslice, severity | transpose row _timeslice column severity
+
+
+
+_sourceCategory=*TrendMicroDSM dvc | parse regex "Deep Security \w+\|[\d.]+\|(?<signature_id>[\d]+)\|(?<event_name>[^\|]+)\|" | timeslice 5m | count _timeslice, signature_id | transpose row _timeslice column signature_id
+
+
+
+_sourceCategory=*TrendMicroDSM | parse regex "Trend Micro\|(?<component>Deep Security \w+?)\|[\d.]+\|(?<signature_id>[\d]+)\|(?<event_name>[^\|]+)\|" | count as count signature_id, component,event_name | sort count | limit 10
+
+
+_sourceCategory=Firewall/* OR _sourceCategory=IPS/* OR _sourceCategory=Auth/* OR _sourceCategory=VPN/* OR _sourceCategory=*TrendMicroDSM | timeslice 5m | count by _timeslice, _sourceCategory | transpose row _timeslice column _sourceCategory
