@@ -1,0 +1,90 @@
+This IS NOT to replace any Sumo out of the box contents.. this is for enhancing the Sumo App.
+
+Logs are in JSON format.. there is a sample FER under FER section.
+
+--------
+Logins from Multiple IPs
+
+_sourceCategory=*google* 
+| parse "\"type\": \"*\"" as action nodrop
+| parse "name\": \"*\"," as result nodrop
+| parse "ipAddress\": \"*\"" as ipaddr nodrop 
+| parse "email\": \"*\"" as user nodrop 
+| parse "applicationName\": \"*\"" as app nodrop
+| where (app="login" and result="login_success")
+| parse field=user "*@*" as name, domain
+| join (count by ipaddr, name) as t1, (count_distinct(ipaddr) by name) as t2 on t1.name=t2.name | where t2__count_distinct >1 | sort t2_name
+| t1_name as name
+| t1_ipaddr as ipaddr
+| fields name, ipaddr
+
+----------------
+Administrative Actions
+
+_sourceCategory=*google* 
+| parse regex "\"name\": \"owner\",\s+\"value\": \"(?<driveuser>.*)\"" nodrop
+| parse "profileId\": \"*\"" as profileId nodrop
+| parse "\"type\": \"*\"" as action nodrop
+| parse "name\": \"*\"," as result nodrop
+| parse "ipAddress\": \"*\"" as ipaddr nodrop 
+| parse "email\": \"*\"" as user nodrop 
+| parse "applicationName\": \"*\"" as app nodrop
+//| where (app="login" and result="login_failure")
+| where app = "admin"
+| count by result, user
+| transpose row user column result
+
+----------------------
+Apps used by users
+
+_sourceCategory=*google* 
+| parse "\"type\": \"*\"" as action nodrop
+| parse "name\": \"*\"," as result nodrop
+| parse "ipAddress\": \"*\"" as ipaddr nodrop 
+| parse "email\": \"*\"" as user nodrop 
+| parse "applicationName\": \"*\"" as app nodrop
+| parse regex "\"name\": \"app_name\",\s+\"value\": \"(?<appname>.*)\"" nodrop 
+ | where app = "token"
+| count by appname, user
+| transpose row user column appname
+
+-----------------
+Token Actions
+
+_sourceCategory=*google* 
+| parse "\"type\": \"*\"" as action nodrop
+| parse "name\": \"*\"," as result nodrop
+| parse "ipAddress\": \"*\"" as ipaddr nodrop 
+| parse "email\": \"*\"" as user nodrop 
+| parse "applicationName\": \"*\"" as app nodrop
+ | where app = "token"
+| count by user, result
+| transpose row user column result
+
+-----------------
+Failed Logins 
+
+_sourceCategory=*google* 
+| parse "\"type\": \"*\"" as action nodrop
+| parse "name\": \"*\"," as result nodrop
+| parse "ipAddress\": \"*\"" as ipaddr nodrop 
+| parse "email\": \"*\"" as user nodrop 
+| parse "applicationName\": \"*\"" as app nodrop
+| where (app="login" and result="login_failure")
+| parse field=user "*@*" as name, domain
+| count by name, ipaddr
+| sort _count
+
+------------
+Login Attempts
+
+_sourceCategory=*google* 
+| parse "\"type\": \"*\"" as action nodrop
+| parse "name\": \"*\"," as result nodrop
+| parse "ipAddress\": \"*\"" as ipaddr nodrop 
+| parse "email\": \"*\"" as user nodrop 
+| parse "applicationName\": \"*\"" as app nodrop
+| where (app="login") // and result="login_success")
+| parse field=user "*@*" as name, domain
+| lookup latitude, longitude, country_code, country_name, region, city, postal_code, area_code, metro_code from geo://default on ip = ipaddr
+| count by latitude, longitude, country_code, country_name, region, city, postal_code, area_code, metro_code
