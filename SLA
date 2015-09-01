@@ -1,0 +1,9 @@
+Calculate SLA from heatbeats:
+
+lbstatus.txt 10.30.2.241 
+| backshift _messagetime, 1 as lasttime 
+| where !isNull(lasttime)  
+| abs(_messagetime-lasttime) as diff_time 
+| diff_time > 5000 ? diff_time : 0 as down_time 
+| sum(down_time) as d, sum(diff_time) as t
+| (t-d)*100/t as availablity
