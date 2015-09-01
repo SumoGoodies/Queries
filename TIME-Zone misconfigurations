@@ -1,1 +1,7 @@
 
+This only displays the misconfigured..
+
+| round((_receipttime - _messagetime)/1000/60/60) as delta
+| where !(delta = 0)
+| count by delta, _sourceHost, _source, _sourceName 
+| order by _source
