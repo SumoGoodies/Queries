@@ -1,5 +1,21 @@
 Courtesy of DavidM of Austin
 
-Filed under the following link..
+-------
 
-https://github.com/SumoGoodies/How-to/blob/master/Check%20Source%20Time%20Errors%20-%20Use%20Receipt%20Time
+*
+| toInt(_messageTime) - toInt(_receiptTime) as ms
+| round(ms/1000/60) as minutes
+| round(minutes/60) as hours
+| abs(hours) as drifthours
+| abs(minutes) as driftminutes
+| where driftminutes > 1
+| if(driftminutes > 45,"Timezone","Drifting") as problem
+| if(minutes > 1,"Fast","") as direction
+| if(minutes < 1,"Slow",direction) as direction
+| if (problem="Timezone",drifthours,driftminutes) as correction
+| if (problem="Timezone","hrs","mins") as unit
+| concat(correction," ",unit) as correction
+| substring(_raw,0,100) as _raw
+| first(_raw) as example_log by _collector, _sourceHost, _sourceCategory, correction, driftminutes, direction, problem
+| sort driftminutes desc
+| fields –driftminutes
