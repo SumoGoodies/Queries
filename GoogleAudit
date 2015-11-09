@@ -88,3 +88,16 @@ _sourceCategory=*google*
 | parse field=user "*@*" as name, domain
 | lookup latitude, longitude, country_code, country_name, region, city, postal_code, area_code, metro_code from geo://default on ip = ipaddr
 | count by latitude, longitude, country_code, country_name, region, city, postal_code, area_code, metro_code
+
+
+
+--------------
+Username showed up the most.. this can be used for outlier detection
+
+_sourceCategory=*google* |extract "\"(?<user>\S+@\S+?)\"" multi | count user | sort _count
+
+
+or above can be a base for detecting leaks.. 
+_sourceCategory=*google* |extract "\"(?<user>\S+@\S+?)\"" multi | where user!="*abcdefc.com" | count user
+
+
