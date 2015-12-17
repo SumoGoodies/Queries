@@ -5,3 +5,8 @@ This only displays the misconfigured..
 | where !(delta = 0)
 | count by delta, _sourceHost, _source, _sourceName 
 | order by _source
+
+
+Or figure out message delay drifts
+
+ | _messagetime - _receipttime as delay | delay/1000/60 as delay_mins | count, avg(delay_mins) by _sourcehost | sort by _count
