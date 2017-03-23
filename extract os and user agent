@@ -1,0 +1,25 @@
+Credit goes to Ryan Johnson, Sumo SE in Australia, former Splunk Ninja.
+
+// Process system information for OS details
+| parse regex field=system_information "(?<os>Linux)" nodrop
+| parse regex field=system_information "(?<os>Android);?(?: (?<os_version>[\d\.]+))?" nodrop
+| parse regex field=system_information "(?<os>Windows)(?: NT)?(?:\s*(?<os_version>[\d\.]+))" nodrop
+| parse regex field=system_information "Linux;(?:\s*(?:N|U|I);)?\s*(?<os>Android)\s+(?<os_version>[\d\.]+);(?:\s*\w{2}-\w{2};)? (?<mobile_device>.*?) Build" nodrop
+| parse regex field=system_information "Macintosh; Intel (?<os>Mac OS X) (?<os_version>\S+)" nodrop
+| parse regex field=system_information "(?<mobile_device>iPhone|iPod|iPad);(?:\s*(?:N|U|I);)? CPU (?<os>(?:iPhone )?OS) (?<os_version>\S+)" nodrop
+| parse regex field=system_information "(?<os>Windows Phone) (?<os_version>[\d\.]+)" nodrop
+| parse regex field=system_information "(?<os>CrOS) \S+ (?<os_version>[\d\.]+)" nodrop
+
+// Process system_information for bot/crawler/robot detection
+| if(system_information matches "*http*","TRUE","FALSE") AS is_robot // By convention, bots/crawlers typically contain a link
+
+// Process browser information
+| parse regex field=platform "(?<browser>AppleWebKit)" nodrop
+| if(isEmpty(browser),"",platform_version) AS browser_version
+| parse regex field=extensions "(?<browser>BingPreview|Chrome|Firefox|Safari)/(?<browser_version>[\d\.]+)" nodrop
+| parse regex field=system_information "(?<browser>Trident).*?rv:(?<browser_version>[\d\.]+)" nodrop
+| parse regex field=system_information "(?<browser>MSIE) (?<browser_version>[\d\.]+)" nodrop
+| parse regex field=system_information "(?<browser>IEMobile|Opera Mini)/(?<browser_version>[\d\.]+)" nodrop
+| if(browser="Trident","MSIE",browser) AS browser
+| if(os="Android" AND isEmpty(browser),"Android Browser", browser) AS browser
+| count BY cs_user_agent, platform, platform_version, platform_information, extensions, browser, browser_version
