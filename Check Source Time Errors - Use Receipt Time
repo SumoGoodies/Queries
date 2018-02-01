@@ -18,4 +18,4 @@ Courtesy of DavidM of Austin
 | substring(_raw,0,100) as _raw
 | first(_raw) as example_log by _collector, _sourceHost, _sourceCategory, correction, driftminutes, direction, problem
 | sort driftminutes desc
-| fields –driftminutes
+| fields - driftminutes
