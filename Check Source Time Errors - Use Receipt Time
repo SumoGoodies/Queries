@@ -19,3 +19,10 @@ Courtesy of DavidM of Austin
 | first(_raw) as example_log by _collector, _sourceHost, _sourceCategory, correction, driftminutes, direction, problem
 | sort driftminutes desc
 | fields - driftminutes
+
+
+*
+| formatDate(fromMillis(_receipttime), "MM/dd/yyyy HH:mm:ss:SSS") as reciept 
+| _receiptTime - _messageTime as delay | delay / 60000 as delayInMinutes 
+| toInt(delayInMinutes) as delayInMinutes 
+| count(*) as messagecount, avg(delayInMinutes) as avgDelayInMinutes, min(delayInMinutes) as minDelayInMinutes, max(delayInMinutes) as maxDelayInMinutes by _collector, _source, _sourceName
